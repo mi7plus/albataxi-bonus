@@ -3,6 +3,13 @@ declare(strict_types=1);
 namespace Alba;
 final class Http {
  public static string $styleNonce='';
+ public static function clientIp():string{
+  $remote=(string)($_SERVER['REMOTE_ADDR']??'unknown');$proxy=(string)(App::$config['trusted_proxy_host']??'');
+  if($proxy!==''&&in_array($remote,gethostbynamel($proxy)?:[],true)){
+   $forwarded=trim((string)($_SERVER['HTTP_X_FORWARDED_FOR']??''));
+   if(filter_var($forwarded,FILTER_VALIDATE_IP)){return $forwarded;}
+  }return $remote;
+ }
  public static function json(array $data,int $status=200):void{http_response_code($status);header('Content-Type: application/json; charset=utf-8');echo json_encode($data,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);}
  public static function redirect(string $url):never{header('Location: '.$url, true,303);exit;}
  public static function view(string $name,array $data=[]):void{extract($data,EXTR_SKIP);ob_start();try{require dirname(__DIR__).'/views/'.$name.'.php';$html=ob_get_clean();}catch(\Throwable $e){ob_end_clean();throw $e;}echo $html;}
@@ -105,7 +112,7 @@ final class Http {
   $fullName=(string)($_POST['full_name']??'');$dateOfBirth=(string)($_POST['date_of_birth']??'');
   if($_SERVER['REQUEST_METHOD']==='POST'){
    try{
-    $ip=$_SERVER['REMOTE_ADDR']??'unknown';$phone=App::phone($phone);
+    $ip=self::clientIp();$phone=App::phone($phone);
     if($mode==='register'){
      Auth::throttle('register:'.$ip,10);$u=Auth::create($phone,(string)($_POST['password']??''),App::bool($_POST['terms']??false),App::bool($_POST['marketing']??false),$fullName,$dateOfBirth);
      Auth::renew($u,Auth::context());
@@ -141,7 +148,7 @@ final class Http {
    if($page==='qr-pdf'){self::qrPdf($qr,$orientation);return;}
    $design=QrDesign::load((int)$qr['membership_id'],$orientation);self::view('display',compact('qr','orientation','design'));return;
   }
-  Loyalty::driver((int)$qr['membership_id']);Auth::throttle('scan:'.$qr['id'].':'.($_SERVER['REMOTE_ADDR']??''),60,60);
+  Loyalty::driver((int)$qr['membership_id']);Auth::throttle('scan:'.$qr['id'].':'.self::clientIp(),60,60);
   Loyalty::event((int)$qr['membership_id'],$page==='review'?'review_open':'bonus_open');
   if($page==='review'){
    if(!$qr['review_url']){App::fail('REVIEW_UNAVAILABLE','Pagina de recenzii nu este configurată.',404);}

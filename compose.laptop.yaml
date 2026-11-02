@@ -1,0 +1,59 @@
+name: albataxi-laptop
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    stop_grace_period: 60s
+    environment:
+      MARIADB_DATABASE: albataxi
+      MARIADB_USER: alba
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Run Install first}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Run Install first}
+    command: ["--innodb-flush-log-at-trx-commit=1", "--sync-binlog=1"]
+    volumes: ["database:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      APP_URL: https://${DOMAIN:?Run Install first}
+      APP_KEY: ${APP_KEY:?Run Install first}
+      TRUSTED_PROXY_HOST: proxy
+      DB_DSN: mysql:host=db;dbname=albataxi;charset=utf8mb4
+      DB_USER: alba
+      DB_PASSWORD: ${DB_PASSWORD}
+    env_file: [.laptop/sms.env]
+    ports: ["127.0.0.1:${LOCAL_PORT:-8098}:80"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://localhost/?page=health') === false ? 1 : 0);"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["${PUBLIC_BIND:-0.0.0.0}:${HTTP_PORT:-80}:80", "${PUBLIC_BIND:-0.0.0.0}:${HTTPS_PORT:-443}:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ${CADDYFILE:-./laptop/Caddyfile}:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy_config:/config
+    depends_on:
+      web: {condition: service_healthy}
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+volumes:
+  database:
+    name: ${DB_VOLUME:-albataxi-laptop-database}
+  certificates:
+  caddy_config:

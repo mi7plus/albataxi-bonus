@@ -126,3 +126,7 @@ Apply database/005_qr_templates.sql. Existing individual layouts become pending 
 ## Upgrade to 0.4.1
 
 Apply database/006_account_profiles.sql to add the optional registration profile table. Existing accounts require no changes. Registration now accepts optional full name and birth date, and Romanian phone formats are normalised before matching. No scheduler or file storage is needed.
+
+## Laptop hosting alternative
+
+Version 0.5.0 adds a separate Windows/Docker Desktop production deployment. See [Laptop installation and recovery](LAPTOP.md). It uses persistent database/certificate volumes, Caddy HTTPS, Windows scheduled startup/backups, encrypted external-drive archives and a restore workflow. This does not add a scheduler or file-storage requirement to shared-hosting deployments.

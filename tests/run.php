@@ -33,6 +33,13 @@ try{
  check(App::money('20,01')===2001&&App::money('0.01')===1,'integer bani parsing');
  foreach(['-1','NaN','20.001','1e3','1.2.3',''] as $v){rejects(fn()=>App::money($v),'INVALID_AMOUNT');}
  check(App::phone('0722 123 456')==='+40722123456','canonical phone');
+ $originalServer=$_SERVER;$originalProxy=App::$config['trusted_proxy_host']??'';
+ $_SERVER['REMOTE_ADDR']='127.0.0.1';$_SERVER['HTTP_X_FORWARDED_FOR']='203.0.113.7';App::$config['trusted_proxy_host']='';
+ check(Alba\Http::clientIp()==='127.0.0.1','direct requests cannot spoof forwarded client address');
+ App::$config['trusted_proxy_host']='localhost';check(Alba\Http::clientIp()==='203.0.113.7','configured proxy preserves client address for rate limits');
+ $_SERVER['REMOTE_ADDR']='198.51.100.9';check(Alba\Http::clientIp()==='198.51.100.9','untrusted peer cannot supply client address');
+ $_SERVER['REMOTE_ADDR']='127.0.0.1';$_SERVER['HTTP_X_FORWARDED_FOR']='203.0.113.7, 203.0.113.8';check(Alba\Http::clientIp()==='127.0.0.1','unexpected forwarded chain is rejected');
+ $_SERVER=$originalServer;App::$config['trusted_proxy_host']=$originalProxy;
  foreach(['+40722123456','0722123456','722123456','40722123456','0040 722 123 456'] as $phoneFormat){check(App::phone($phoneFormat)==='+40722123456','Romanian phone prefix normalisation '.$phoneFormat);}
  check(App::phone('+447700900123')==='+447700900123','explicit foreign country code preserved');
  rejects(fn()=>App::phone('72212345'),'INVALID_PHONE');

@@ -97,3 +97,7 @@ Visual QR layouts: open Atelier QR to move/resize demo QR blocks, edit text, typ
 QR templates now inherit programme → agency → driver. Agency proposals need admin approval; driver proposals need agency approval. Pending/rejected edits keep the approved layout live. Apply migration 005 when upgrading.
 
 Registration keeps phone/password required and adds optional full name/date of birth. Romanian mobile numbers work with or without +4/+40, with one canonical account identity. Upgrade with migration 006.
+
+## Windows laptop hosting
+
+For a personal Windows laptop with a public domain, use Laptop-Install.cmd from the laptop deployment package. Start/Stop/Status/Backup/Restore buttons, persistent data, automatic recovery after Windows sign-in and encrypted daily external-drive backups are included. See [Laptop installation and recovery](docs/LAPTOP.md). Build the separate package with pwsh -File bin/package-laptop.ps1. The original shared-hosting deployment remains available.

@@ -4,7 +4,7 @@ require dirname(__DIR__).'/vendor/autoload.php';
 date_default_timezone_set('UTC');
 $local=dirname(__DIR__).'/config.local.php';
 $config=is_file($local)?require $local:[];
-foreach(['environment'=>'APP_ENV','base_url'=>'APP_URL','db_dsn'=>'DB_DSN','db_user'=>'DB_USER','db_password'=>'DB_PASSWORD','app_key'=>'APP_KEY','sms_backend'=>'SMS_BACKEND','sms_url'=>'SMS_URL','sms_token'=>'SMS_TOKEN','smslink_connection_id'=>'SMSLINK_CONNECTION_ID','smslink_password'=>'SMSLINK_PASSWORD','smslink_sender'=>'SMSLINK_SENDER'] as $key=>$name){
+foreach(['environment'=>'APP_ENV','base_url'=>'APP_URL','db_dsn'=>'DB_DSN','db_user'=>'DB_USER','db_password'=>'DB_PASSWORD','app_key'=>'APP_KEY','trusted_proxy_host'=>'TRUSTED_PROXY_HOST','sms_backend'=>'SMS_BACKEND','sms_url'=>'SMS_URL','sms_token'=>'SMS_TOKEN','smslink_connection_id'=>'SMSLINK_CONNECTION_ID','smslink_password'=>'SMSLINK_PASSWORD','smslink_sender'=>'SMSLINK_SENDER'] as $key=>$name){
  if(getenv($name)!==false){$config[$key]=getenv($name);}
 }
 $config+=['environment'=>'production','base_url'=>'http://localhost:8080','sms_backend'=>'disabled','sms_url'=>'','sms_token'=>'','smslink_connection_id'=>'','smslink_password'=>'','smslink_sender'=>'','maintenance'=>false];

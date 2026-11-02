@@ -12,6 +12,8 @@ try{
    foreach(explode(';',file_get_contents($file)) as $sql){if(trim($sql)!==''){App::db()->exec($sql);}}
    App::insert('schema_migrations',['version'=>$name,'applied_at'=>App::now()]);echo "Applied $name\n";
   }
+ }elseif($command==='admin-count'){
+  echo (int)App::scalar('SELECT COUNT(*) FROM accounts WHERE is_admin=1')."\n";
  }elseif($command==='admin'){
   $phone=App::phone($argv[2]??'');$password=getenv('ALBA_ADMIN_PASSWORD')?:'';
   Auth::password($password);$user=Auth::create($phone,$password,true);

@@ -66,3 +66,5 @@ Statuses include INSUFFICIENT_CREDIT, APPROVAL_EXPIRED, BALANCE_CHANGED, PARTICI
 
 
 Registration POST accepts required phone/password and the existing terms acceptance, plus optional full_name (maximum 160 characters) and date_of_birth (YYYY-MM-DD, real date, not in the future). Omitted profile fields remain absent/null in account_profiles. Login, registration and OTP flows normalise Romanian +407..., 07..., 7..., 407... and 00407... to one +407... identity; duplicate registration and rate limiting use that identity. Explicit international country codes remain intact.
+
+When using the laptop reverse proxy, TRUSTED_PROXY_HOST=proxy enables client-IP forwarding only from that Docker service's resolved address. Other peers cannot override rate-limit identity through X-Forwarded-For. Direct/shared hosting leaves proxy trust disabled by default.
