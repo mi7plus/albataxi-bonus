@@ -1,0 +1,40 @@
+# Local development/testing only. Shared hosting needs neither Docker nor a worker.
+services:
+  web:
+    build: .
+    ports: ["127.0.0.1:8097:80"]
+    environment:
+      APP_ENV: development
+      APP_URL: http://localhost:8097
+      APP_KEY: local-development-only-change-for-production-0000000000000000
+      DB_DSN: mysql:host=db;dbname=albataxi;charset=utf8mb4
+      DB_USER: alba
+      DB_PASSWORD: local-development-only
+      SMS_BACKEND: database
+    volumes:
+      - .:/var/www/app
+      - vendor:/var/www/app/vendor
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(file_get_contents('http://localhost/?page=health') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: albataxi
+      MARIADB_USER: alba
+      MARIADB_PASSWORD: local-development-only
+      MARIADB_ROOT_PASSWORD: local-root-development-only
+    volumes: ["db:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+volumes:
+  db:
+  vendor:
+

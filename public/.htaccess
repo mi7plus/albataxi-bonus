@@ -1,0 +1,5 @@
+Options -Indexes
+<FilesMatch "^(app-path|app-path.example)\.php$">
+ Require all denied
+</FilesMatch>
+

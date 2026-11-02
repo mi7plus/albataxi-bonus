@@ -1,0 +1,1 @@
+<?php require __DIR__.'/head.php'; ?><main id="main" class="narrow card"><p class="eyebrow">ALBATAXI BONUS</p><h1>Nu putem continua încă.</h1><div class="alert error" role="alert"><?=e($message)?></div><a class="button" href="<?=e(url())?>">Înapoi la cont</a></main><?php require __DIR__.'/foot.php'; ?>

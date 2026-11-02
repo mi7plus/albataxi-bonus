@@ -1,0 +1,18 @@
+# Isolated restore target used for the local backup/restore rehearsal.
+services:
+  restore-db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: albataxi
+      MARIADB_USER: alba
+      MARIADB_PASSWORD: restore-local-only
+      MARIADB_ROOT_PASSWORD: restore-root-local-only
+    volumes: ["restore-db:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+volumes:
+  restore-db:
+

@@ -1,0 +1,17 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up -d --build
+      - run: docker compose exec -T web php bin/console.php migrate
+      - run: docker compose exec -T db mariadb -uroot -plocal-root-development-only -e "CREATE DATABASE albataxi_test; GRANT ALL ON albataxi_test.* TO 'alba'@'%';"
+      - run: docker compose exec -T -e DB_DSN='mysql:host=db;dbname=albataxi_test;charset=utf8mb4' web php tests/run.php
+      - run: docker compose exec -T web php tests/smslink.php
+      - run: docker compose exec -T web composer audit
+      - run: docker compose exec -T -e ALBA_DEMO_PASSWORD=Local-CI-test-password web php bin/seed-demo.php
+      - run: docker compose exec -T -e ALBA_DEMO_PASSWORD=Local-CI-test-password web php tests/http.php http://web/
+      - run: docker compose exec -T web php bin/package.php
+

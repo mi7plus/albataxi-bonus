@@ -1,0 +1,7 @@
+config.local.php
+public/app-path.php
+.env
+vendor/
+dist/
+artifacts/
+.codebase-memory/
