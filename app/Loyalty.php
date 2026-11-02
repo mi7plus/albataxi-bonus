@@ -20,7 +20,7 @@ final class Loyalty {
  public static function driver(int $id,bool $lock=false):array{
   $m=App::one("SELECT m.*,a.verified,a.active account_active,p.status participant_status,p.funding_terms,p.name participant_name FROM memberships m JOIN accounts a ON a.id=m.account_id JOIN participants p ON p.id=m.participant_id WHERE m.id=? AND m.role='driver'".($lock?' FOR UPDATE':''),[$id]);
   if(!$m||!$m['active']||$m['admin_suspended']||$m['ended_at']||!$m['accepted_at']||$m['participant_status']!=='active'){App::fail('PARTICIPANT_SUSPENDED','Șoferul sau participantul nu este activ.',409);}
-  if(!$m['verified']||!$m['account_active']){App::fail('PHONE_UNVERIFIED','Telefonul șoferului trebuie verificat.',409);}
+  if(!Auth::phoneAccepted($m)||!$m['account_active']){App::fail('PHONE_UNVERIFIED','Telefonul șoferului trebuie verificat.',409);}
   $v=App::one('SELECT * FROM vehicles WHERE membership_id=? AND participant_id=? AND eligible=1',[$id,$m['participant_id']]);
   $r=App::one('SELECT * FROM rules WHERE participant_id=? ORDER BY id DESC LIMIT 1',[$m['participant_id']]);
   if(!$v||!$v['plate']||!$r||!$m['funding_terms']){App::fail('SETUP_INCOMPLETE','Lipsesc vehiculul, regulile sau termenii fondului.',409);}
@@ -30,7 +30,7 @@ final class Loyalty {
   App::insert('scan_events',['driver_id'=>$driver,'kind'=>$kind,'payload'=>json_encode($payload),'created_at'=>App::now()]);
  }
  public static function ready(array $u,string $token):array{
-  if(!$u['verified']){App::fail('PHONE_UNVERIFIED','Verificați telefonul.',403);}
+  if(!Auth::phoneAccepted($u)){App::fail('PHONE_UNVERIFIED','Verificați telefonul.',403);}
   return App::tx(function()use($u,$token){
    App::one('SELECT id FROM accounts WHERE id=? FOR UPDATE',[$u['id']]);
    $qr=App::one('SELECT * FROM qr_pages WHERE token=?',[$token]);if(!$qr){App::fail('QR_REVOKED','Codul QR nu mai este disponibil.',404);}

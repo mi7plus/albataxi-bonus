@@ -24,8 +24,9 @@ final class Readiness {
   $production=App::$config['environment']!=='development';
   $result[]=['label'=>'Mod de producție','ok'=>$production,'detail'=>$production?'Cookie-uri Secure activate.':'Mediu local de dezvoltare.'];
   $sms=(App::$config['sms_backend']==='smslink'&&SmsLink::configured())||(App::$config['sms_backend']==='http'&&str_starts_with(App::$config['sms_url'],'https://')&&App::$config['sms_token']!=='');
-  $result[]=['label'=>'SMS real configurat','ok'=>$sms,'detail'=>$sms?'Gateway configurat; livrarea trebuie verificată separat.':'Niciun gateway SMS real verificat.'];
-  $result[]=['label'=>'Acces HTTPS extern pentru SMS','ok'=>(bool)ini_get('allow_url_fopen'),'detail'=>ini_get('allow_url_fopen')?'Disponibil în PHP; verificați accesul permis de furnizor.':'Activați accesul extern sau configurați un adaptor cURL.'];
+  $optional=!Auth::phoneVerificationRequired();
+  $result[]=['label'=>$optional?'Mod fără SMS':'SMS real configurat','ok'=>$optional||$sms,'detail'=>$optional?'Mod fără SMS activ: înscrierea și utilizarea nu cer confirmare SMS.':($sms?'Gateway configurat; livrarea trebuie verificată separat.':'Gateway selectat, dar neconfigurat: completați datele sau alegeți explicit modul fără SMS.')];
+  $result[]=['label'=>'Acces HTTPS extern pentru SMS','ok'=>$optional||(bool)ini_get('allow_url_fopen'),'detail'=>$optional?'Nu este necesar în modul fără SMS.':(ini_get('allow_url_fopen')?'Disponibil în PHP; verificați accesul permis de furnizor.':'Activați accesul extern sau configurați un adaptor cURL.')];
   return $result;
  }
  public static function record(array $u,array $d): array {

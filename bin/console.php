@@ -12,6 +12,14 @@ try{
    foreach(explode(';',file_get_contents($file)) as $sql){if(trim($sql)!==''){App::db()->exec($sql);}}
    App::insert('schema_migrations',['version'=>$name,'applied_at'=>App::now()]);echo "Applied $name\n";
   }
+ }elseif($command==='reset-password'){
+  $phone=App::phone($argv[2]??'');$password=getenv('ALBA_NEW_PASSWORD')?:'';Auth::password($password);
+  App::tx(function()use($phone,$password){
+   $account=App::one('SELECT id FROM accounts WHERE phone=? FOR UPDATE',[$phone]);if(!$account){throw new RuntimeException('Account not found.');}
+   App::run('UPDATE accounts SET password_hash=?,session_version=session_version+1 WHERE id=?',[password_hash($password,PASSWORD_DEFAULT),$account['id']]);
+   App::run('DELETE FROM sessions WHERE account_id=?',[$account['id']]);App::run('UPDATE otps SET used=1 WHERE phone=?',[$phone]);
+   App::audit(null,'account.password_reset_local',$account['id']);
+  });echo "Password reset; existing sessions and codes revoked. Phone verification status was not changed.\n";
  }elseif($command==='admin-count'){
   echo (int)App::scalar('SELECT COUNT(*) FROM accounts WHERE is_admin=1')."\n";
  }elseif($command==='admin'){
@@ -28,6 +36,6 @@ try{
  }elseif($command==='dev-sms'){
   if(App::$config['environment']!=='development'){throw new RuntimeException('Development only.');}
   foreach(App::all('SELECT phone,message FROM dev_messages ORDER BY id DESC LIMIT 10') as $row){echo $row['phone'].' '.$row['message']."\n";}
- }else{echo "Commands: migrate | admin +407... (ALBA_ADMIN_PASSWORD env) | reconcile | doctor | dev-sms\n";}
+ }else{echo "Commands: migrate | admin +407... (ALBA_ADMIN_PASSWORD env) | reset-password +407... (ALBA_NEW_PASSWORD env) | reconcile | doctor | dev-sms\n";}
 }catch(Throwable $e){fwrite(STDERR,$e->getMessage()."\n");exit(1);}
 

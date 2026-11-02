@@ -10,7 +10,7 @@ services:
       DB_DSN: mysql:host=db;dbname=albataxi;charset=utf8mb4
       DB_USER: alba
       DB_PASSWORD: local-development-only
-      SMS_BACKEND: database
+      SMS_BACKEND: ${SMS_BACKEND:-disabled}
     volumes:
       - .:/var/www/app
       - vendor:/var/www/app/vendor

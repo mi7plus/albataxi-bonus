@@ -130,3 +130,7 @@ Apply database/006_account_profiles.sql to add the optional registration profile
 ## Laptop hosting alternative
 
 Version 0.5.0 adds a separate Windows/Docker Desktop production deployment. See [Laptop installation and recovery](LAPTOP.md). It uses persistent database/certificate volumes, Caddy HTTPS, Windows scheduled startup/backups, encrypted external-drive archives and a restore workflow. This does not add a scheduler or file-storage requirement to shared-hosting deployments.
+
+## SMS optional mode (0.5.2)
+
+Use sms_backend=disabled until the SMS API is acquired. No database migration is needed; existing verification flags remain unchanged. Once an SMS backend is enabled, unverified accounts must complete verification. Provider errors never bypass it. See SMSLINK.md for assisted recovery and rollout. Automated development OTP tests require SMS_BACKEND=database; CI sets this explicitly.

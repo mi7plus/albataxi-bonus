@@ -39,7 +39,7 @@ final class Memberships {
   return App::tx(function()use($u,$token){
    App::one('SELECT id FROM accounts WHERE id=? FOR UPDATE',[$u['id']]);
    $invite=App::one("SELECT * FROM invitations WHERE token=? AND status='pending' FOR UPDATE",[$token]);
-   if(!$invite||$invite['expires_at']<=App::now()||$invite['phone']!==$u['phone']||!$u['verified']){App::fail('INVITATION_INVALID','Invitația a expirat sau telefonul verificat nu corespunde.',409);}
+   if(!$invite||$invite['expires_at']<=App::now()||$invite['phone']!==$u['phone']||!Auth::phoneAccepted($u)){App::fail('INVITATION_INVALID','Invitația a expirat, telefonul nu corespunde sau necesită verificare.',409);}
    $p=App::one('SELECT * FROM participants WHERE id=? FOR UPDATE',[$invite['participant_id']]);
    if(in_array($p['status'],['suspended','closed'],true)){App::fail('PARTICIPANT_SUSPENDED','Participantul nu acceptă înscrieri.',409);}
    if($invite['role']==='driver'){

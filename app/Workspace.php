@@ -70,7 +70,7 @@ final class Workspace {
    $listOffset=$section==='agencies'?$offset:0;
    $searchPart=$section==='agencies'?' AND p.name LIKE ?':'';
    $listParams=array_merge($pparams,$selectionParams,$section==='agencies'?['%'.$search.'%']:[]);
-   $counts=in_array($section,['overview','agencies'],true)?','.Setup::COUNTS:'';
+   $counts=in_array($section,['overview','agencies'],true)?','.Setup::counts():'';
    $participants=App::all("SELECT p.*,(SELECT CONCAT(earn_bps,',',cap_bps,',',contribution_bps,',',daily_limit,',',max_fare) FROM rules WHERE participant_id=p.id ORDER BY id DESC LIMIT 1) effective_rule $counts FROM participants p WHERE $pwhere $selection $searchPart ORDER BY p.name,p.id LIMIT 25 OFFSET $listOffset",$listParams);
    if($section==='agencies'){$participantTotal=(int)App::scalar("SELECT COUNT(*) FROM participants p WHERE $pwhere $selection $searchPart",$listParams);}
   }

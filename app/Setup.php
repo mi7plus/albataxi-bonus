@@ -9,11 +9,12 @@ final class Setup {
   (SELECT COUNT(*) FROM memberships sm WHERE sm.participant_id=p.id AND sm.role='driver' AND sm.accepted_at IS NOT NULL AND sm.ended_at IS NULL) setup_drivers,
   (SELECT COUNT(*) FROM vehicles sv JOIN memberships sm ON sm.id=sv.membership_id WHERE sv.participant_id=p.id AND sv.eligible=1 AND sv.plate<>'' AND sm.ended_at IS NULL AND sm.accepted_at IS NOT NULL) setup_vehicles,
   (SELECT COUNT(*) FROM memberships sm JOIN accounts sa ON sa.id=sm.account_id WHERE sm.participant_id=p.id AND sm.role='driver' AND sm.active=1 AND sm.admin_suspended=0 AND sm.ended_at IS NULL AND sa.verified=1 AND sa.active=1) setup_active_drivers";
+ public static function counts():string{return Auth::phoneVerificationRequired()?self::COUNTS:str_replace('sa.verified=1','1=1',self::COUNTS);}
  public static function steps(array $p, string $role): array {
   $link=fn(string $section)=>'?role='.urlencode($role).'&section='.$section.'&participant='.$p['id'];
   $agency=$p['kind']==='agency';
   $steps=[];
-  if($agency){$steps[]=['key'=>'manager','label'=>'Manager invitat, telefon verificat și afiliere activată','done'=>(int)($p['setup_managers']??0)>0,'required'=>true,'url'=>$link('drivers'),'action'=>'Invită sau activează managerul'];}
+  if($agency){$steps[]=['key'=>'manager','label'=>Auth::phoneVerificationRequired()?'Manager invitat, telefon verificat și afiliere activată':'Manager invitat și afiliere activată','done'=>(int)($p['setup_managers']??0)>0,'required'=>true,'url'=>$link('drivers'),'action'=>'Invită sau activează managerul'];}
   $steps[]=['key'=>'rules','label'=>'Reguli de câștig și utilizare stabilite','done'=>!empty($p['effective_rule']),'required'=>true,'url'=>$role==='admin'?$link('agencies').'#rules-'.$p['id']:$link('account'),'action'=>$role==='admin'?'Configurează regulile':'Solicită configurarea administratorului'];
   $steps[]=['key'=>'funding','label'=>'Termenii fondului înregistrați','done'=>trim($p['funding_terms'])!=='','required'=>true,'url'=>$role==='admin'?$link('agencies').'#participation-'.$p['id']:$link('account'),'action'=>$role==='admin'?'Completează termenii':'Solicită termenii administratorului'];
   $steps[]=['key'=>'drivers','label'=>'Cel puțin un șofer a acceptat afilierea','done'=>(int)($p['setup_drivers']??0)>0,'required'=>true,'url'=>$link('drivers'),'action'=>'Invită un șofer'];

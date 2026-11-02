@@ -110,16 +110,21 @@ final class Http {
  private static function auth(string $mode):void{
   $error='';$notice='';$u=Auth::user(false,false);$phone=(string)($_POST['phone']??$u['phone']??'');
   $fullName=(string)($_POST['full_name']??'');$dateOfBirth=(string)($_POST['date_of_birth']??'');
+  if(!Auth::phoneVerificationRequired()){
+   if($mode==='verify'){self::redirect(App::url($u?'':'?page=login'));}
+   if($mode==='recover'){self::view('recover-offline');return;}
+  }
   if($_SERVER['REQUEST_METHOD']==='POST'){
    try{
     $ip=self::clientIp();$phone=App::phone($phone);
     if($mode==='register'){
      Auth::throttle('register:'.$ip,10);$u=Auth::create($phone,(string)($_POST['password']??''),App::bool($_POST['terms']??false),App::bool($_POST['marketing']??false),$fullName,$dateOfBirth);
      Auth::renew($u,Auth::context());
+     if(!Auth::phoneVerificationRequired()){self::redirect(App::url());}
      try{Auth::requestOtp($phone,'verify',$ip);}catch(Problem $e){$context=Auth::context();$context['notice']=$e->getMessage();Auth::context($context);}
      self::redirect(App::url('?page=verify'));
     }elseif($mode==='login'){
-     $u=Auth::login($phone,(string)($_POST['password']??''),$ip);Auth::renew($u,Auth::context());self::redirect(App::url($u['verified']?'':'?page=verify'));
+     $u=Auth::login($phone,(string)($_POST['password']??''),$ip);Auth::renew($u,Auth::context());self::redirect(App::url(Auth::phoneAccepted($u)?'':'?page=verify'));
     }else{
      $purpose=$mode==='recover'?'recover':'verify';
      if(($_POST['action']??'')==='request'){Auth::requestOtp($phone,$purpose,$ip);$notice='Dacă numărul este eligibil, veți primi un cod SMS.';}
@@ -155,7 +160,7 @@ final class Http {
    self::redirect(Memberships::reviewUrl($qr['review_url']));
   }
   $context=Auth::context();$context['qr']=$token;Auth::context($context);$u=Auth::user(false,false);
-  if($u&&$u['verified']){Loyalty::ready($u,$token);unset($context['qr']);Auth::context($context);self::redirect(App::url());}
+  if($u&&Auth::phoneAccepted($u)){Loyalty::ready($u,$token);unset($context['qr']);Auth::context($context);self::redirect(App::url());}
   self::view('landing',['qr'=>$qr]);
  }
  public static function qrImage(string $url):string{

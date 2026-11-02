@@ -79,7 +79,7 @@ final class Commands {
    if($active&&(!$m['accepted_at']||$m['ended_at'])){App::fail('ACCEPTANCE_REQUIRED','Afilierea trebuie acceptată și curentă.');}
    if($active&&$m['role']==='driver'){
     $p=App::one('SELECT * FROM participants WHERE id=?',[$m['participant_id']]);$a=App::one('SELECT verified,active FROM accounts WHERE id=?',[$m['account_id']]);
-    if($p['status']!=='active'||!$p['funding_terms']||!$a['verified']||!$a['active']||!App::one('SELECT id FROM rules WHERE participant_id=?',[$p['id']])||!App::one("SELECT id FROM vehicles WHERE membership_id=? AND eligible=1 AND plate<>''",[$id])){App::fail('SETUP_INCOMPLETE','Verificați participantul, regulile, telefonul și vehiculul.');}
+    if($p['status']!=='active'||!$p['funding_terms']||!Auth::phoneAccepted($a)||!$a['active']||!App::one('SELECT id FROM rules WHERE participant_id=?',[$p['id']])||!App::one("SELECT id FROM vehicles WHERE membership_id=? AND eligible=1 AND plate<>''",[$id])){App::fail('SETUP_INCOMPLETE','Verificați participantul, regulile, telefonul și vehiculul.');}
    }
    $suspended=$u['is_admin']?(int)!$active:(int)$m['admin_suspended'];
    App::run('UPDATE memberships SET active=?,admin_suspended=? WHERE id=?',[(int)$active,$suspended,$id]);App::audit((int)$u['id'],'membership.updated',$id,['active'=>$active,'reason'=>$d['reason']]);return ['id'=>$id];

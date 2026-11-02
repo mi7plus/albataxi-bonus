@@ -25,13 +25,13 @@ Open **http://localhost:8097**. Demo accounts:
 
 The password is the value you supply to the seed command. Seeding only runs with APP_ENV=development. No production administrator or production password is created by migration.
 
-The local SMS adapter stores synthetic development messages in the database. Read them using:
+SMS confirmation is disabled by default: registration and login work with phone/password alone. To simulate verification in development/tests, set SMS_BACKEND=database before docker compose up; the simulator stores synthetic messages in the database. Read them using:
 
 ~~~sh
 docker compose exec web php bin/console.php dev-sms
 ~~~
 
-Production uses the SMSLink adapter; follow [SMSLink setup](docs/SMSLINK.md) to configure the Gateway Connection ID and password. The generic HTTPS gateway remains available. The development inbox is never served over HTTP.
+SMS is optional in production. Keep SMS_BACKEND=disabled until an API is acquired. When ready, enable the SMSLink adapter; follow [SMSLink setup](docs/SMSLINK.md) to configure the Gateway Connection ID and password. The generic HTTPS gateway remains available. The development inbox is never served over HTTP.
 
 ## Included
 
@@ -52,7 +52,7 @@ Use a separate test database; tests refuse to run unless its name ends in _test.
 
 ~~~sh
 docker compose exec db mariadb -uroot -plocal-root-development-only -e "CREATE DATABASE albataxi_test; GRANT ALL ON albataxi_test.* TO 'alba'@'%';"
-docker compose exec -e DB_DSN="mysql:host=db;dbname=albataxi_test;charset=utf8mb4" web php tests/run.php
+docker compose exec -e SMS_BACKEND=database -e DB_DSN="mysql:host=db;dbname=albataxi_test;charset=utf8mb4" web php tests/run.php
 docker compose exec -e ALBA_DEMO_PASSWORD=YOUR_LOCAL_DEMO_PASSWORD web php tests/http.php http://web/
 docker compose exec web composer audit
 docker compose exec web php bin/console.php reconcile

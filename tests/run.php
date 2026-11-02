@@ -3,6 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__).'/app/bootstrap.php';
 use Alba\App;use Alba\Auth;use Alba\Commands;use Alba\Loyalty;use Alba\Memberships;use Alba\Reports;use Alba\Problem;use Alba\Scope;
 if(!str_ends_with((string)App::scalar('SELECT DATABASE()'),'_test')){fwrite(STDERR,"Tests require a separate database ending in _test.\n");exit(1);}
+if(App::$config['sms_backend']!=='database'){throw new RuntimeException('Core tests require SMS_BACKEND=database to exercise verification and OTPs without sending real SMS.');}
 foreach(glob(dirname(__DIR__).'/database/*.sql') as $file){foreach(explode(';',file_get_contents($file)) as $sql){if(trim($sql)!==''){App::db()->exec($sql);}}}
 $checks=0;
 function check(bool $ok,string $message):void{global $checks;if(!$ok){throw new RuntimeException('FAILED: '.$message);}echo 'PASS '.$message."\n";$checks++;}
@@ -54,6 +55,31 @@ try{
  rejects(fn()=>Auth::create('+407'.random_int(10000000,99999999),'Profile-test-password-2026',true,false,str_repeat('a',161)),'INVALID_NAME');
  $admin=account();App::run('UPDATE accounts SET is_admin=1 WHERE id=?',[$admin['id']]);$admin['is_admin']=1;
  $a=participant($admin,'Agency A '.App::id());$b=participant($admin,'Agency B '.App::id());
+ $originalBackend=App::$config['sms_backend'];$originalSession=Auth::$session;App::$config['sms_backend']='disabled';
+ $noSmsPassenger=Auth::create('+407'.random_int(10000000,99999999),'No-sms-test-password-2026',true);
+ Auth::$session=['account_id'=>$noSmsPassenger['id'],'version'=>$noSmsPassenger['session_version']];
+ check(Auth::user()['id']===$noSmsPassenger['id']&&!(bool)Auth::user()['verified'],'disabled SMS permits access without falsely marking phone verified');
+ rejects(fn()=>Auth::requestOtp($noSmsPassenger['phone'],'verify','disabled-test'),'SMS_DISABLED');
+ rejects(fn()=>Auth::consumeOtp($noSmsPassenger['phone'],'recover','123456','Changed-no-sms-password'),'SMS_DISABLED');
+ $noSmsDriver=Auth::create('+407'.random_int(10000000,99999999),'No-sms-test-password-2026',true);
+ $noSmsInvite=Memberships::invite($admin,$a['id'],$noSmsDriver['phone'],'AB-55-SMS');$noSmsMember=Memberships::accept($noSmsDriver,$noSmsInvite['token']);
+ Commands::execute($admin,'membership-update',['id'=>$noSmsMember['membership_id'],'active'=>true,'reason'=>'No SMS mode test'],'');
+ $noSmsQr=App::one('SELECT * FROM qr_pages WHERE membership_id=?',[$noSmsMember['membership_id']]);
+ $noSmsReady=Loyalty::ready($noSmsPassenger,$noSmsQr['token']);$noSmsPreview=Loyalty::preview($noSmsDriver,$noSmsReady['code'],'20',App::id());Loyalty::post($noSmsDriver,$noSmsPreview['ride_id'],App::id());
+ check((int)App::scalar('SELECT balance FROM wallets WHERE passenger_id=?',[$noSmsPassenger['id']])===100,'unverified passenger and driver complete a ride while SMS is explicitly disabled');
+ $noSmsCounts=App::one('SELECT '.Alba\Setup::counts().' FROM participants p WHERE p.id=?',[$a['id']]);
+ check($noSmsCounts['setup_active_drivers']>0,'setup counts include eligible drivers without SMS when disabled');
+ App::$config['sms_backend']='smslink';check(Auth::phoneVerificationRequired()&&!Auth::phoneAccepted($noSmsPassenger),'selecting real gateway enables verification even if credentials are incomplete');
+ rejects(fn()=>Auth::user(),'PHONE_UNVERIFIED');rejects(fn()=>Loyalty::driver((int)$noSmsMember['membership_id']),'PHONE_UNVERIFIED');
+ App::$config['sms_backend']=$originalBackend;Auth::$session=$originalSession;
+ App::insert('sessions',['token_hash'=>hash('sha256',App::token()),'account_id'=>$noSmsPassenger['id'],'csrf'=>bin2hex(random_bytes(32)),'version'=>1,'context_json'=>'{}','expires_at'=>App::after(3600)]);
+ App::insert('otps',['phone'=>$noSmsPassenger['phone'],'purpose'=>'recover','digest'=>password_hash('123456',PASSWORD_DEFAULT),'expires_at'=>App::after(300),'created_at'=>App::now()]);
+ $resetEnv=getenv();$resetEnv['ALBA_NEW_PASSWORD']='Local-reset-test-password-2026';$resetProcess=proc_open([PHP_BINARY,dirname(__DIR__).'/bin/console.php','reset-password',$noSmsPassenger['phone']],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$resetPipes,null,$resetEnv);
+ fclose($resetPipes[0]);$resetOutput=stream_get_contents($resetPipes[1]);$resetError=stream_get_contents($resetPipes[2]);fclose($resetPipes[1]);fclose($resetPipes[2]);$resetExit=proc_close($resetProcess);
+ check($resetExit===0&&password_verify('Local-reset-test-password-2026',App::scalar('SELECT password_hash FROM accounts WHERE id=?',[$noSmsPassenger['id']])),'local operator can reset password without SMS');
+ check((int)App::scalar('SELECT COUNT(*) FROM sessions WHERE account_id=?',[$noSmsPassenger['id']])===0&&(int)App::scalar('SELECT COUNT(*) FROM otps WHERE phone=? AND used=0',[$noSmsPassenger['phone']])===0,'local reset revokes prior sessions and OTP codes');
+ check(!(bool)App::scalar('SELECT verified FROM accounts WHERE id=?',[$noSmsPassenger['id']]),'local password reset does not invent phone verification');
+ $smsCounts=App::one('SELECT '.Alba\Setup::counts().' FROM participants p WHERE p.id=?',[$a['id']]);check((int)$smsCounts['setup_active_drivers']===0,'enabled SMS excludes unverified drivers from setup readiness');
  $da=driver($admin,$a,'AB-01-AAA');$db=driver($admin,$b,'AB-02-BBB');
  $p1=account();$r=post($p1,$da,'20');check((int)$r['earned']===100,'PRD example 1: 20 lei earns 1 lei');
  foreach(['portrait','landscape'] as $orientation){

@@ -3,6 +3,8 @@ on: [push, pull_request]
 jobs:
   integration:
     runs-on: ubuntu-latest
+    env:
+      SMS_BACKEND: database
     steps:
       - uses: actions/checkout@v4
       - run: docker compose up -d --build
@@ -13,6 +15,10 @@ jobs:
       - run: docker compose exec -T web composer audit
       - run: docker compose exec -T -e ALBA_DEMO_PASSWORD=Local-CI-test-password web php bin/seed-demo.php
       - run: docker compose exec -T -e ALBA_DEMO_PASSWORD=Local-CI-test-password web php tests/http.php http://web/
+      - run: docker compose run -d --no-deps -e SMS_BACKEND=disabled --name albataxi-no-sms-test web
+      - run: |
+          docker exec albataxi-no-sms-test php -r 'for($i=0;$i<30;$i++){if(@file_get_contents("http://localhost/?page=health")!==false){exit(0);}sleep(1);}exit(1);'
+      - run: docker compose exec -T -e SMS_BACKEND=disabled web php tests/http-sms-optional.php http://albataxi-no-sms-test/
       - run: docker compose exec -T web php bin/package.php
 
 

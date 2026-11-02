@@ -26,3 +26,11 @@ After configuration, use Administrator → Pregătire de lansare to inspect conf
 Local protocol checks: `docker compose exec -T web php tests/smslink.php`. These use an isolated fake transport, never real credentials or paid messages.
 
 Official protocol: https://www.smslink.ro/sms-gateway-conectarea-la-serviciul-sms-gateway-http.html and https://www.smslink.ro/sms-gateway-raspunsurile-de-confirmare-posibile-ale-sms-gateway-http.html .
+
+## Operating before acquiring SMS
+
+Leave sms_backend=disabled (SMS_BACKEND=disabled on Docker). Registration, login, invitations and rides then need no SMS confirmation. Accounts keep their actual verified flag; skipped confirmation never marks a phone verified. The local Compose and laptop installer default to this mode.
+
+Only switch to smslink after acquiring the API and entering credentials. Verification then becomes mandatory for unverified accounts, including existing accounts at their next use. An enabled gateway with missing credentials, delivery errors or an outage does not silently disable verification. The database backend is an explicit development simulator and still requires test codes.
+
+Without SMS, recovery pages direct users to the administrator. A trusted server operator can reset a password after confirming ownership using php bin/console.php reset-password PHONE with ALBA_NEW_PASSWORD supplied through the process environment. On Docker, pass it with docker compose exec -T -e ALBA_NEW_PASSWORD web php bin/console.php reset-password PHONE (include the laptop Compose/env arguments when using that deployment). Do not place passwords in command arguments or Git. The command revokes sessions and outstanding codes without marking the phone verified.

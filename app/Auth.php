@@ -2,6 +2,8 @@
 declare(strict_types=1);
 namespace Alba;
 final class Auth {
+ public static function phoneVerificationRequired():bool{return (App::$config['sms_backend']??'disabled')!=='disabled';}
+ public static function phoneAccepted(array $account):bool{return !self::phoneVerificationRequired()||!empty($account['verified']);}
  public static ?array $session=null;
  public static ?string $cookie=null;
  public static function start():void{
@@ -24,7 +26,7 @@ final class Auth {
   $user=self::$session&&self::$session['account_id']?App::one('SELECT id,phone,verified,active,is_admin,session_version,marketing,created_at FROM accounts WHERE id=?',[self::$session['account_id']]):null;
   if($user&&(!$user['active']||(int)$user['session_version']!==(int)self::$session['version'])){$user=null;}
   if(!$user&&$required){App::fail('AUTH_REQUIRED','Autentificați-vă pentru a continua.',401);}
-  if($user&&$verified&&!$user['verified']){App::fail('PHONE_UNVERIFIED','Verificați telefonul pentru a continua.',403);}
+  if($user&&$verified&&!self::phoneAccepted($user)){App::fail('PHONE_UNVERIFIED','Verificați telefonul pentru a continua.',403);}
   return $user;
  }
  public static function context(?array $value=null):array{
@@ -88,6 +90,7 @@ final class Auth {
   if($result===false||!preg_match('/\s2\d\d\s/',$http_response_header[0]??'')){App::fail('SMS_UNAVAILABLE','SMS indisponibil temporar. Reîncercați.',503);}
  }
  public static function requestOtp(string $phone,string $purpose,string $ip):void{
+  if(!self::phoneVerificationRequired()){App::fail('SMS_DISABLED','Confirmarea prin SMS nu este activată.',409);}
   $phone=App::phone($phone);if(!in_array($purpose,['verify','recover'],true)){App::fail('INVALID_PURPOSE','Operațiune invalidă.');}
   self::throttle('otp-ip:'.$ip,20);self::throttle('otp-phone:'.$phone,3);
   if(!App::one('SELECT id FROM accounts WHERE phone=? AND active=1',[$phone])){return;}
@@ -100,6 +103,7 @@ final class Auth {
   });
  }
  public static function consumeOtp(string $phone,string $purpose,string $code,?string $password=null):void{
+  if(!self::phoneVerificationRequired()){App::fail('SMS_DISABLED','Confirmarea prin SMS nu este activată.',409);}
   $phone=App::phone($phone);if(!in_array($purpose,['verify','recover'],true)){App::fail('INVALID_PURPOSE','Operațiune invalidă.');}
   if($purpose==='recover'){self::password($password??'');}
   $ok=App::tx(function()use($phone,$purpose,$code,$password){
